@@ -22,6 +22,12 @@ void czyscRownanie(){
     }
 }
 
+void czyscInstrukcje(){
+    while (!instructions.empty()){
+        instructions.pop();
+    }
+}
+
 void wpiszZnaki(){
     while (instructions.top() != '|'){
         rpn_equation.push(' ');
@@ -147,7 +153,7 @@ void dekoduj(string input){
     wpiszZnaki();
 }
 
-int oblicz(){
+float oblicz(){
     stack<float> values;
 
     float var_l = 0;
@@ -156,11 +162,11 @@ int oblicz(){
                         // determine which operation could be performed)
     bool pobieranie_liczby = false;
     bool coma_value = false;
-    bool negative_number = false;
-    int dividor = 10;
+    int multiplier = 1;
 
     while (!rpn_equation.empty()){
 
+        // cout << endl << instructions.top() << " '" << values.top() << "'";
         char v = rpn_equation.top();
         char i = instructions.top();
 
@@ -168,10 +174,10 @@ int oblicz(){
             if (pobieranie_liczby) { 
                pobieranie_liczby = false;
                coma_value = false;
-               negative_number = false;
+               multiplier = 1;
                no_args++;
             }
-            if (i == 'v') {
+            if (i == 'v' && no_args >= 1) {
                 var_r = sqrtf(values.top());
                 instructions.pop();
                 values.pop();
@@ -186,45 +192,88 @@ int oblicz(){
                 switch (i) {
                     case '+' : { values.push(var_l + var_r); break; }
                     case '-' : { values.push(var_l - var_r); break; }
+                    case '*' : { values.push(var_l * var_r); break; }
+                    case '/' : { values.push(var_l / var_r); break; }
+                    case '^' : { values.push(var_l * var_r * var_r); break; }
                 }
+                no_args--;
                 var_l = var_r = 0;
             }
         }
         else {
-            if (v == 45 || v == 46 || (v >= 48 && v <= 57)) {
+            if ((v == 45 && pobieranie_liczby) || 
+                 v == 46 ||
+                (v >= 48 && v <= 57)) {
                 signed int tmp = 0;
-                if (v == 45) {
-                    tmp = -1;
-                    negative_number = true;
-                    pobieranie_liczby = true;
-                }
-                else if (v == 46) {
-                    coma_value = true;
-                }
-                else{
-                    if (pobieranie_liczby) {
-                        tmp = values.top();
+                if (pobieranie_liczby){
+                    if (v == 46) {
+                        tmp = values.top() / multiplier;
+                        values.pop();
+                        coma_value = true;
+                        multiplier = 1;
+                    }
+                    else if (v == 45) {
+                        tmp = -1 * values.top();
                         values.pop();
                     }
-                    pobieranie_liczby = true;
-                    if (coma_value) {
-                        if (!negative_number)   tmp += (v - 48)/dividor;
-                        else                    tmp -= (v - 48)/dividor;
-                        dividor *= 10;
-                    }
                     else {
-                        tmp *= 10;
-                        if (!negative_number)   tmp += v - 48;
-                        else                    tmp -= v - 48;
+                        if (!coma_value) {
+                            tmp = (v - 48) * multiplier;
+                        }
+                        else {
+                            tmp = values.top() + v * multiplier;
+                            values.pop();
+                        }
+                        multiplier *= 10;
                     }
+                }
+                else{
+                    pobieranie_liczby = true;
+                    if (v == 46) { continue;}
+                    tmp = v - 48;
                 }
                 values.push(tmp);
             }
             else { instructions.push(v); }
         }
+
+        rpn_equation.pop();
     }
 
-    return var_r;
+    if (!instructions.empty()) {
+        // Act as if the end fo the
+        if (pobieranie_liczby) { 
+            pobieranie_liczby = false;
+            coma_value = false;
+            multiplier = 1;
+            no_args++;
+        }
+        if (instructions.top() == 'v' && no_args >= 1) {
+            var_r = sqrtf(values.top());
+            instructions.pop();
+            values.pop();
+            values.push(var_r);
+            var_r = 0;
+        }
+        else if (no_args > 1){
+            var_l = values.top();
+            values.pop();
+            var_r = values.top();
+            values.pop();
+            switch (instructions.top()) {
+                case '+' : { values.push(var_l + var_r); break; }
+                case '-' : { values.push(var_l - var_r); break; }
+                case '*' : { values.push(var_l * var_r); break; }
+                case '/' : { values.push(var_l / var_r); break; }
+                case '^' : { values.push(var_l * var_r * var_r); break; }
+            }
+            no_args--;
+            var_l = var_r = 0;
+        }
+        czyscInstrukcje();
+    }
+
+    return values.top();
 }
 
 
@@ -247,10 +296,11 @@ int main(){
 
     while (!tmpStack.empty()){
         cout << tmpStack.top();
+        rpn_equation.push(tmpStack.top());
         tmpStack.pop();
     }
     
-    cout << "'" << endl;
+    cout << "' = " << oblicz() << endl;
 
     return 0;
 }
