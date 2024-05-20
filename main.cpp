@@ -17,8 +17,10 @@ stack<char> instructions;
 
 // Funckcje w programie
 void czyscRownanie(){
-    while (!rpn_equation.empty()){
-        rpn_equation.pop();
+    if (!rpn_equation.empty()){
+        while (!rpn_equation.empty()){
+            rpn_equation.pop();
+        }
     }
 }
 
@@ -38,6 +40,7 @@ void wpiszZnaki(){
 
 void dekoduj(string input){
     czyscRownanie();
+    instructions.push('|');
 
     /*
     (+) (-)  level 1
@@ -101,6 +104,7 @@ void dekoduj(string input){
             case '*' : {
                 if (lcal > 2) { wpiszZnaki(); }
                 lcal = 2;
+                lcwas = true;
                 lcwan = false;
                 instructions.push('*');
                 break;
@@ -108,6 +112,7 @@ void dekoduj(string input){
             case '/' : {
                 if (lcal > 2) { wpiszZnaki(); }
                 lcal = 2;
+                lcwas = true;
                 lcwan = false;
                 instructions.push('/');
                 break;
@@ -115,6 +120,7 @@ void dekoduj(string input){
             case ':' : {
                 if (lcal > 2) { wpiszZnaki(); }
                 lcal = 2;
+                lcwas = true;
                 lcwan = false;
                 instructions.push('/');
                 break;
@@ -151,9 +157,11 @@ void dekoduj(string input){
         }
     }
     wpiszZnaki();
+    // czyscInstrukcje();
 }
 
 float oblicz(){
+
     stack<float> values;
 
     float var_l = 0;
@@ -166,7 +174,6 @@ float oblicz(){
 
     while (!rpn_equation.empty()){
 
-        // cout << endl << instructions.top() << " '" << values.top() << "'";
         char v = rpn_equation.top();
         char i = instructions.top();
 
@@ -177,6 +184,7 @@ float oblicz(){
                multiplier = 1;
                no_args++;
             }
+            math_operand:
             if (i == 'v' && no_args >= 1) {
                 var_r = sqrtf(values.top());
                 instructions.pop();
@@ -184,7 +192,7 @@ float oblicz(){
                 values.push(var_r);
                 var_r = 0;
             }
-            else if (no_args > 1){
+            else if (no_args >= 2){
                 var_l = values.top();
                 values.pop();
                 var_r = values.top();
@@ -194,10 +202,12 @@ float oblicz(){
                     case '-' : { values.push(var_l - var_r); break; }
                     case '*' : { values.push(var_l * var_r); break; }
                     case '/' : { values.push(var_l / var_r); break; }
-                    case '^' : { values.push(var_l * var_r * var_r); break; }
+                    case '^' : { values.push(pow(var_l, var_r)); break; }
                 }
+                instructions.pop();
                 no_args--;
                 var_l = var_r = 0;
+                if (no_args >=1 ) goto math_operand;
             }
         }
         else {
@@ -217,13 +227,8 @@ float oblicz(){
                         values.pop();
                     }
                     else {
-                        if (!coma_value) {
-                            tmp = (v - 48) * multiplier;
-                        }
-                        else {
-                            tmp = values.top() + v * multiplier;
-                            values.pop();
-                        }
+                        tmp = values.top() + (v - 48) * multiplier;
+                        values.pop();
                         multiplier *= 10;
                     }
                 }
@@ -231,6 +236,7 @@ float oblicz(){
                     pobieranie_liczby = true;
                     if (v == 46) { continue;}
                     tmp = v - 48;
+                    multiplier *= 10;
                 }
                 values.push(tmp);
             }
@@ -240,46 +246,12 @@ float oblicz(){
         rpn_equation.pop();
     }
 
-    if (!instructions.empty()) {
-        // Act as if the end fo the
-        if (pobieranie_liczby) { 
-            pobieranie_liczby = false;
-            coma_value = false;
-            multiplier = 1;
-            no_args++;
-        }
-        if (instructions.top() == 'v' && no_args >= 1) {
-            var_r = sqrtf(values.top());
-            instructions.pop();
-            values.pop();
-            values.push(var_r);
-            var_r = 0;
-        }
-        else if (no_args > 1){
-            var_l = values.top();
-            values.pop();
-            var_r = values.top();
-            values.pop();
-            switch (instructions.top()) {
-                case '+' : { values.push(var_l + var_r); break; }
-                case '-' : { values.push(var_l - var_r); break; }
-                case '*' : { values.push(var_l * var_r); break; }
-                case '/' : { values.push(var_l / var_r); break; }
-                case '^' : { values.push(var_l * var_r * var_r); break; }
-            }
-            no_args--;
-            var_l = var_r = 0;
-        }
-        czyscInstrukcje();
-    }
-
     return values.top();
 }
 
 
 // PROGRAM GŁÓWNY
 int main(){
-    instructions.push('|');
 
     string s;
     cout << "Write equation: ";
@@ -294,6 +266,16 @@ int main(){
         rpn_equation.pop();
     }
 
+    // czyscInstrukcje();
+    if (!rpn_equation.empty()){
+        while (!rpn_equation.empty()){
+            rpn_equation.pop();
+        }
+    }
+
+    rpn_equation.push(' '); // added, so algorytm can perform last equation
+                            // -> equations are perfomed when space is found
+
     while (!tmpStack.empty()){
         cout << tmpStack.top();
         rpn_equation.push(tmpStack.top());
@@ -301,6 +283,8 @@ int main(){
     }
     
     cout << "' = " << oblicz() << endl;
+    
+    czyscInstrukcje();
 
     return 0;
 }
