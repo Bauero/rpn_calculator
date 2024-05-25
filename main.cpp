@@ -9,14 +9,20 @@ using std::endl;
 using std::string;
 using std::stack;
 
-
+////////////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
+////////////////////////////////////////////////////////////////////////////////
 stack<char> rpn_equation;
 stack<char> instructions;
 
 
-// Funckcje w programie
-void czyscRownanie(){
+////////////////////////////////////////////////////////////////////////////////
+// FUNCITONS IN PROGRAM
+////////////////////////////////////////////////////////////////////////////////
+void cleanRPNEquationStack(){
+
+    /// Remove all values from `rpn_equaiton` stack
+
     if (!rpn_equation.empty()){
         while (!rpn_equation.empty()){
             rpn_equation.pop();
@@ -24,13 +30,20 @@ void czyscRownanie(){
     }
 }
 
-void czyscInstrukcje(){
+void cleanInstructionsStack(){
+
+    /// Remove all values from `instructions` stack
+
     while (!instructions.empty()){
         instructions.pop();
     }
 }
 
-void wpiszZnaki(){
+void clearCurrentSetOfInstructions(){
+
+    /* This function is responible adding all instruction which are stored in
+    the instruction stack, to `rpn_equation` stack*/
+
     while (instructions.top() != '|'){
         rpn_equation.push(' ');
         rpn_equation.push(instructions.top());
@@ -38,8 +51,19 @@ void wpiszZnaki(){
     }
 }
 
-void dekoduj(string input){
-    czyscRownanie();
+void decode(string input){
+    /**
+     * This functions is responsible for decoding the initial equaiton and
+     * rewriting it into Reverse Polish Notation
+     * 
+     * IMPORTANT! : the end result is stored upside-down (first char from the
+     * top, is the last one from the 'left' if we were to rewrite it)
+     * 
+     * @return function doesn't return anything -> end result is stored inside
+     * `rpn_equation` stack!
+    */
+    
+    cleanRPNEquationStack();
     instructions.push('|');
 
     /*
@@ -68,18 +92,20 @@ void dekoduj(string input){
             case '(' : {
                 level++;
                 lcwan = false;
+                lcwas = false;
                 instructions.push('|');
                 break;
             }
             case ')' : {
                 level--;
                 lcwan = false;
-                wpiszZnaki();
+                lcwas = false;
+                clearCurrentSetOfInstructions();
                 instructions.pop();
                 break;
             }
             case '+' : {
-                if (lcal > 1) { wpiszZnaki(); }
+                if (lcal > 1) { clearCurrentSetOfInstructions(); }
                 lcal = 1;
                 lcwas = true;
                 lcwan = false;
@@ -94,7 +120,7 @@ void dekoduj(string input){
                 }
                 else {
                     lcwas = true;
-                    if (lcal > 1) { wpiszZnaki(); }
+                    if (lcal > 1) { clearCurrentSetOfInstructions(); }
                     lcal = 1;
                     lcwan = false;
                     instructions.push('-');
@@ -102,7 +128,7 @@ void dekoduj(string input){
                 break;
             }
             case '*' : {
-                if (lcal > 2) { wpiszZnaki(); }
+                if (lcal > 2) { clearCurrentSetOfInstructions(); }
                 lcal = 2;
                 lcwas = true;
                 lcwan = false;
@@ -110,7 +136,7 @@ void dekoduj(string input){
                 break;
             }
             case '/' : {
-                if (lcal > 2) { wpiszZnaki(); }
+                if (lcal > 2) { clearCurrentSetOfInstructions(); }
                 lcal = 2;
                 lcwas = true;
                 lcwan = false;
@@ -118,7 +144,7 @@ void dekoduj(string input){
                 break;
             }
             case ':' : {
-                if (lcal > 2) { wpiszZnaki(); }
+                if (lcal > 2) { clearCurrentSetOfInstructions(); }
                 lcal = 2;
                 lcwas = true;
                 lcwan = false;
@@ -126,7 +152,7 @@ void dekoduj(string input){
                 break;
             }
             case '^' : {
-                if (lcal > 3) { wpiszZnaki(); }
+                if (lcal > 3) { clearCurrentSetOfInstructions(); }
                 lcal = 3;
                 lcwas = true;
                 lcwan = false;
@@ -134,7 +160,7 @@ void dekoduj(string input){
                 break;
             }
             case 'v' : {
-                if (lcal > 3) { wpiszZnaki(); }
+                if (lcal > 3) { clearCurrentSetOfInstructions(); }
                 lcal = 3;
                 lcwas = true;
                 lcwan = false;
@@ -156,11 +182,18 @@ void dekoduj(string input){
             }
         }
     }
-    wpiszZnaki();
-    // czyscInstrukcje();
+    clearCurrentSetOfInstructions();
 }
 
-float oblicz(){
+float calculate(){
+    /**
+     * This function is executed when one want to calculate values which are
+     * stored in 'rpn_equation' stack - it is assumed that the funciton is run
+     * after `decode` function, therefore calculation is done after decoding
+     * the initial string
+     * 
+     * @return float value, being the end result of calculation
+    */
 
     stack<float> values;
 
@@ -168,7 +201,7 @@ float oblicz(){
     float var_r = 0;
     int no_args = 0;  // amount of arguments available at the moment (used to
                         // determine which operation could be performed)
-    bool pobieranie_liczby = false;
+    bool reading_number = false;
     bool coma_value = false;
     int multiplier = 1;
 
@@ -178,8 +211,8 @@ float oblicz(){
         char i = instructions.top();
 
         if (v == ' ') {
-            if (pobieranie_liczby) { 
-               pobieranie_liczby = false;
+            if (reading_number) { 
+               reading_number = false;
                coma_value = false;
                multiplier = 1;
                no_args++;
@@ -211,11 +244,11 @@ float oblicz(){
             }
         }
         else {
-            if ((v == 45 && pobieranie_liczby) || 
+            if ((v == 45 && reading_number) || 
                  v == 46 ||
                 (v >= 48 && v <= 57)) {
                 signed int tmp = 0;
-                if (pobieranie_liczby){
+                if (reading_number){
                     if (v == 46) {
                         tmp = values.top() / multiplier;
                         values.pop();
@@ -233,7 +266,7 @@ float oblicz(){
                     }
                 }
                 else{
-                    pobieranie_liczby = true;
+                    reading_number = true;
                     if (v == 46) { continue;}
                     tmp = v - 48;
                     multiplier *= 10;
@@ -250,13 +283,16 @@ float oblicz(){
 }
 
 
-// PROGRAM GŁÓWNY
+////////////////////////////////////////////////////////////////////////////////
+// MAIN PROGRAM
+////////////////////////////////////////////////////////////////////////////////
 int main(){
+    
 
     string s;
     cout << "Write equation: ";
     cin >> s;
-    dekoduj(s);
+    decode(s);
 
     stack<char> tmpStack;
 
@@ -266,7 +302,7 @@ int main(){
         rpn_equation.pop();
     }
 
-    // czyscInstrukcje();
+
     if (!rpn_equation.empty()){
         while (!rpn_equation.empty()){
             rpn_equation.pop();
@@ -282,9 +318,9 @@ int main(){
         tmpStack.pop();
     }
     
-    cout << "' = " << oblicz() << endl;
+    cout << "' = " << calculate() << endl;
     
-    czyscInstrukcje();
+    cleanInstructionsStack();
 
     return 0;
 }
